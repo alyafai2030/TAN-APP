@@ -9,7 +9,7 @@
     <title>الرماية التنشيطية</title>
     <link rel="apple-touch-icon" href="tr.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         const manifestData = {
             "name": "الرماية التنشيطية",
@@ -70,8 +70,8 @@
         .shooter-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f8f9fa; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
         .shooter-details { margin: 5px 0; color: #555; font-size: 0.9em; }
         .team-header { font-size: 1.2em; color: #2c3e50; margin: 15px 0 10px; padding-bottom: 5px; border-bottom: 2px solid #007bff; }
-        .stages-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        .stages-table td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        .stages-table { width: 95%; border-collapse: collapse; margin: 5px 0; font-size: 14px; }
+        .stages-table td { border: 1px solid #ccc; padding: 5px; text-align: center; font-size: 11; }
         .add-stage-button { background-color: #007bff; color: white; padding: 10px; text-align: center; margin-top: 10px; border-radius: 5px; cursor: pointer; width: 100%; }
         .add-stage-button:hover { background-color: #0056b3; }
         .stage-actions { display: flex; gap: 10px; justify-content: center; }
@@ -268,7 +268,7 @@
             width: 90px;
             height: 90px;
             display: block;
-            margin-top: 100px;
+            margin-top: 230px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -443,11 +443,18 @@
                     <span></span>
                 </div>
                 <h1 id="edit-shooters-title" style="text-align: center; font-size: 22px;">الرماة</h1>
-                <div onclick="showPage('add-shooter-page')" style="padding-right: 5%;">
-                    <i class="fa-solid fa-user-plus fa-lg" style="color: #0d47ab;"></i>
-                    <span></span>
+                <div style="display: flex; gap: 50px; padding-right: 1%;">
+                    <div onclick="showPage('add-shooter-page')">
+                        <i class="fa-solid fa-user-plus fa-lg" style="color: #0d47ab;"></i>
+                        <span></span>
+                    </div>
+                    <div onclick="document.getElementById('import-shooters-input').click()">
+                        <i class="fa-solid fa-file-import fa-lg" style="color: #0d47ab;"></i>
+                        <span></span>
+                    </div>
                 </div>
             </div>
+            <input type="file" id="import-shooters-input" accept=".xlsx, .xls" style="display: none;" onchange="importShooters(event)">
             <div id="shootersList"></div>
         </div>
     </div>
@@ -503,7 +510,7 @@
                         <th>الرماية</th>
                         <th>السلاح</th>
                         <th>المسافة</th>
-                        <th>عدد الطلقات</th>
+                        <th> الطلقات</th>
                         <th>النقاط</th>
                         <th>الإجراءات</th>
                     </tr>
@@ -624,10 +631,18 @@
                     <span></span>
                 </div>
                 <h1 style="text-align: center;">تفاصيل الرماية</h1>
-                <div class="button" style="text-align:center; margin-inline-start: 20%; color: #3a12af;font-size:large;" onclick="shareShootingDetails()">
-                    <i class="fa-sharp fa-solid fa-share-nodes fa-lg" style="color: #3a12af;"></i>
-                    <span>مشاركة</span>
+                <div style="display: flex; gap: 20px; margin-inline-start: 0%;">
+                    <div class="button" style="text-align:center; color: #3a12af;font-size:large;" onclick="shareShootingDetails()">
+                        <i class="fa-sharp fa-solid fa-share-nodes fa-lg" style="color: #3a12af;"></i>
+                        <span>مشاركة</span>
+                    </div>
+                    <div class="button" style="text-align:center; color: #3a12af;font-size:large;" onclick="document.getElementById('import-results-input').click()">
+                        <i class="fa-solid fa-file-import fa-lg" style="color: #3a12af;"></i>
+                        <span>استيراد</span>
+                    </div>
                 </div>
+            </div>
+            <input type="file" id="import-results-input" accept=".xlsx, .xls" style="display: none;" onchange="importResults(event)">
             </div>
             <div class="form-group">
                 <label for="stage-filter-details">اختر المرحلة:</label>
@@ -1680,6 +1695,144 @@
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(err => console.error('فشل تسجيل Service Worker:', err));
+        }
+        function importShooters(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+        
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: ['name', 'rank', 'number', 'team'], range: 1 });
+        
+                let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
+                let duplicateNumbers = [];
+        
+                jsonData.forEach(shooter => {
+                    // التحقق من تكرار الرقم
+                    if (shooter.number && shooters.some(s => s.number === shooter.number)) {
+                        duplicateNumbers.push(shooter.number);
+                        return;
+                    }
+                    shooters.push({
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // معرف فريد
+                        name: shooter.name || '',
+                        rank: shooter.rank || '',
+                        number: shooter.number || '',
+                        team: shooter.team || 'Team 1'
+                    });
+                });
+        
+                if (duplicateNumbers.length > 0) {
+                    alert(`تم العثور على أرقام مكررة: ${duplicateNumbers.join(', ')}. تم تجاهل السجلات المكررة.`);
+                }
+        
+                localStorage.setItem('shooters', JSON.stringify(shooters));
+                loadShooters();
+                alert('تم استيراد الرماة بنجاح!');
+                event.target.value = ''; // إعادة تعيين حقل الإدخال
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        function importResults(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+        
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+                    header: ['shooterName', 'shooterNumber', 'stageName', 'date', 'A', 'C', 'D', 'M'],
+                    range: 1
+                });
+        
+                let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
+                let stages = JSON.parse(localStorage.getItem('stages') || '[]');
+                let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
+                let errors = [];
+                let warnings = [];
+        
+                jsonData.forEach((result, index) => {
+                    // التحقق من وجود الرامي
+                    const shooter = shooters.find(s => s.number === result.shooterNumber || s.name === result.shooterName);
+                    if (!shooter) {
+                        errors.push(`السطر ${index + 2}: الرامي "${result.shooterName}" أو الرقم "${result.shooterNumber}" غير موجود.`);
+                        return;
+                    }
+        
+                    // التحقق من وجود المرحلة
+                    const stage = stages.find(s => s.name === result.stageName);
+                    if (!stage) {
+                        errors.push(`السطر ${index + 2}: المرحلة "${result.stageName}" غير موجودة.`);
+                        return;
+                    }
+        
+                    // تصحيح عدد الطلقات تلقائيًا
+                    let A = parseInt(result.A) || 0;
+                    let C = parseInt(result.C) || 0;
+                    let D = parseInt(result.D) || 0;
+                    let M = parseInt(result.M) || 0;
+                    const totalShots = A + C + D + M;
+        
+                    if (totalShots !== stage.rounds) {
+                        const difference = stage.rounds - totalShots;
+                        if (difference > 0) {
+                            M += difference; // إضافة الطلقات الناقصة إلى M
+                            warnings.push(`السطر ${index + 2}: عدد الطلقات (${totalShots}) أقل من المطلوب (${stage.rounds}) للمرحلة "${stage.name}". تمت إضافة ${difference} إلى M.`);
+                        } else if (difference < 0) {
+                            errors.push(`السطر ${index + 2}: عدد الطلقات (${totalShots}) أكبر من المطلوب (${stage.rounds}) للمرحلة "${stage.name}".`);
+                            return;
+                        }
+                    }
+        
+                    // حساب النتيجة والتقدير
+                    const totalScore = A * scoring.A + C * scoring.C + D * scoring.D + M * scoring.M;
+                    const maxScore = stage.rounds * 5;
+                    const percentage = (totalScore / maxScore) * 100;
+                    let grade;
+                    if (percentage >= 90) grade = "ممتاز";
+                    else if (percentage >= 80) grade = "جيد جداً";
+                    else if (percentage >= 70) grade = "جيد";
+                    else if (percentage >= 60) grade = "متوسط";
+                    else grade = "راسب";
+        
+                    // إضافة أو تحديث النتيجة
+                    const scoreData = {
+                        shooterId: shooter.id,
+                        stageId: stage.name,
+                        totalScore,
+                        grade,
+                        scores: { A, C, D, M }
+                    };
+        
+                    const existingScoreIndex = shooterScores.findIndex(score => score.shooterId === shooter.id && score.stageId === stage.name);
+                    if (existingScoreIndex !== -1) {
+                        shooterScores[existingScoreIndex] = scoreData;
+                    } else {
+                        shooterScores.push(scoreData);
+                    }
+                });
+        
+                if (errors.length > 0) {
+                    alert(`تم العثور على أخطاء أثناء الاستيراد:\n${errors.join('\n')}`);
+                }
+                if (warnings.length > 0) {
+                    alert(`تم الاستيراد مع تحذيرات:\n${warnings.join('\n')}`);
+                }
+                if (errors.length === 0) {
+                    alert('تم استيراد النتائج بنجاح!');
+                }
+        
+                localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
+                loadShootingDetails();
+                loadResults();
+                event.target.value = '';
+            };
+            reader.readAsArrayBuffer(file);
         }
     </script>
 </body>
