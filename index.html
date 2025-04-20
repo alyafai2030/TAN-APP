@@ -1448,40 +1448,87 @@
         }
         // دالة لمشاركة النتائج
         function shareResults() {
-            const resultsTable = document.getElementById('resultsTable');
-            const stageFilter = document.getElementById('stage-filter');
-            if (!resultsTable || !stageFilter) {
-                alert('خطأ في تحميل النتائج للمشاركة.');
+            let results = JSON.parse(localStorage.getItem('results') || '[]');
+            if (results.length === 0) {
+                alert('لا توجد نتائج للمشاركة.');
                 return;
             }
-            const rows = resultsTable.querySelectorAll('tr');
-            if (rows.length === 0) {
-                alert('لا توجد نتائج للمشاركة!');
-                return;
-            }
-            let csvContent = '\uFEFF';
-            csvContent += 'اسم الرامي,التاريخ,الرماية,المسافة,الطلقات,النقاط,التقدير\n';
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                const rowData = Array.from(cells).map(cell => `"${cell.textContent.replace(/"/g, '""')}"`);
-                csvContent += rowData.join(',') + '\n';
+        
+            // إنشاء رأس الجدول
+            const header = [
+                "الرقم",
+                "الاسم",
+                "الفريق",
+                "المرحلة",
+                "A",
+                "C",
+                "D",
+                "M",
+                "النتيجة",
+                "التقدير",
+                "التاريخ"
+            ];
+        
+            // تحديد أطوال ثابتة لكل حقل لضمان المحاذاة
+            const columnWidths = [10, 20, 15, 15, 5, 5, 5, 5, 10, 10, 15];
+        
+            // إنشاء رأس الجدول مع المحاذاة
+            let tableText = header.map((col, i) => col.padStart(columnWidths[i])).join(' | ');
+            tableText += '\n' + '-'.repeat(tableText.length) + '\n';
+        
+            // إضافة النتائج
+            results.forEach(result => {
+                const shooter = JSON.parse(localStorage.getItem('shooters') || '[]').find(s => s.id === result.shooterId);
+                if (!shooter) return;
+        
+                const row = [
+                    shooter.number || '',
+                    shooter.name || '',
+                    shooter.team || '',
+                    result.stageId || '',
+                    result.shotsA.toString() || '0',
+                    result.shotsC.toString() || '0',
+                    result.shotsD.toString() || '0',
+                    result.shotsM.toString() || '0',
+                    result.totalScore.toString() || '0',
+                    result.grade || '',
+                    new Date(result.date).toLocaleDateString('ar-EG') || ''
+                ];
+        
+                // محاذاة كل حقل بناءً على العرض المحدد
+                const rowText = row.map((cell, i) => cell.padStart(columnWidths[i])).join(' | ');
+                tableText += rowText + '\n';
             });
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const fileName = `نتائج_الرماية_${stageFilter.value || 'جميع_المراحل'}.csv`;
-            if (navigator.share && navigator.canShare) {
-                const file = new File([blob], fileName, { type: 'text/csv' });
-                const shareData = { files: [file] };
-                if (navigator.canShare(shareData)) {
-                    navigator.share(shareData).catch(error => {
-                        console.error('خطأ في مشاركة الملف:', error);
-                        fallbackToDownload(blob, fileName);
-                    });
-                } else {
-                    fallbackToDownload(blob, fileName);
-                }
+        
+            // إحاطة النص بوسوم لجعله preformatted (يستخدم خط monospace)
+            const finalText = '```\n' + tableText + '\n```';
+        
+            // مشاركة النص
+            if (navigator.share) {
+                navigator.share({
+                    title: 'نتائج الرماية التنشيطية',
+                    text: finalText
+                }).catch(err => {
+                    console.error('خطأ أثناء المشاركة:', err);
+                    // الرجوع إلى النسخ إذا فشلت المشاركة
+                    copyToClipboard(finalText);
+                    alert('تم نسخ النتائج إلى الحافظة!');
+                });
             } else {
-                fallbackToDownload(blob, fileName);
+                // إذا لم يكن navigator.share مدعومًا (مثل الكمبيوتر)، انسخ النص
+                copyToClipboard(finalText);
+                alert('تم نسخ النتائج إلى الحافظة!');
             }
+        }
+        
+        // دالة مساعدة للنسخ إلى الحافظة
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
         }
 
         // دالة لحذف جميع النتائج
