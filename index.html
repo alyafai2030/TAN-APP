@@ -420,15 +420,15 @@
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> التاريخ  :  <span id="stage-date-in-score"></span></div> 
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> الطلقات  :  <span id="stage-rounds"></span></div>
             </div>
-            <div class="input-container">
+             <div class="input-container">
                 <label for="shotsA">A:</label>
-                <input style="background-color: #1e3799; color: white; text-align: center;" placeholder="0" id="shotsA" value="0" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
+                <input type="number" style="background-color: #1e3799; color: white; text-align: center;" placeholder="0" id="shotsA" value="0" min="0" inputmode="numeric" pattern="[0-9]*" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
                 <label for="shotsC">C:</label>
-                <input style="background-color: #1e3799; color: white; text-align: center;" placeholder="0" id="shotsC" value="0" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
+                <input type="number" style="background-color: #1e3799; color: white; text-align: center;" placeholder="0" id="shotsC" value="0" min="0" inputmode="numeric" pattern="[0-9]*" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
                 <label for="shotsD">D:</label>
-                <input style="background-color: #1e3799; color: white; text-align: center;" id="shotsD" value="0" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
+                <input type="number" style="background-color: #1e3799; color: white; text-align: center;" id="shotsD" value="0" min="0" inputmode="numeric" pattern="[0-9]*" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
                 <label for="shotsM">M:</label>
-                <input style="background-color: #b71540; color: white; text-align: center;" id="shotsM" value="0" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
+                <input type="number" style="background-color: #b71540; color: white; text-align: center;" id="shotsM" value="0" min="0" inputmode="numeric" pattern="[0-9]*" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
             </div>
             <div id="result"></div>
         </div>
