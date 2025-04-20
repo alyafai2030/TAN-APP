@@ -70,8 +70,8 @@
         .shooter-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f8f9fa; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
         .shooter-details { margin: 5px 0; color: #555; font-size: 0.9em; }
         .team-header { font-size: 1.2em; color: #2c3e50; margin: 15px 0 10px; padding-bottom: 5px; border-bottom: 2px solid #007bff; }
-        .stages-table { width: 95%; border-collapse: collapse; margin: 2px 0; font-size: 13px; }
-        .stages-table td { border: 1px solid #ccc; padding: 3px; text-align: center; font-size: 13; }
+        .stages-table { width: 95%; border-collapse: collapse; margin: 5px 0; font-size: 14px; }
+        .stages-table td { border: 1px solid #ccc; padding: 5px; text-align: center; font-size: 11; }
         .add-stage-button { background-color: #007bff; color: white; padding: 10px; text-align: center; margin-top: 10px; border-radius: 5px; cursor: pointer; width: 100%; }
         .add-stage-button:hover { background-color: #0056b3; }
         .stage-actions { display: flex; gap: 10px; justify-content: center; }
@@ -268,7 +268,7 @@
             width: 90px;
             height: 90px;
             display: block;
-            margin-top: 100px;
+            margin-top: 230px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -398,6 +398,11 @@
                     <option value="">جميع الفرق</option>
                 </select>
             </div>
+            <div class="form-group" style="position: relative;">
+                <label for="search-shooters-input">البحث:</label>
+                <input type="text" id="search-shooters-input" placeholder="ابحث باسم الرامي، الرقم، أو الفريق" oninput="loadShootersForStage()">
+                <i class="fas fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #3a12af;"></i>
+            </div>
             <div id="shootersList"></div>
         </div>
     </div>
@@ -420,7 +425,7 @@
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> التاريخ  :  <span id="stage-date-in-score"></span></div> 
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> الطلقات  :  <span id="stage-rounds"></span></div>
             </div>
-             <div class="input-container">
+            <div class="input-container">
                 <label for="shotsA">A:</label>
                 <input type="number" style="background-color: #1e3799; color: white; text-align: center;" placeholder="0" id="shotsA" value="0" min="0" inputmode="numeric" pattern="[0-9]*" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
                 <label for="shotsC">C:</label>
@@ -631,12 +636,12 @@
                     <span></span>
                 </div>
                 <h1 style="text-align: center;">تفاصيل الرماية</h1>
-                <div style="display: flex; gap: 10px; margin-inline-start: 5%;">
-                    <div class="button" style="text-align:center; color: #3a12af;font-size:14px;" onclick="shareShootingDetails()">
+                <div style="display: flex; gap: 5px; margin-inline-start: 10%;">
+                    <div class="button" style="text-align:center; color: #3a12af;font: size 5px;" onclick="shareShootingDetails()">
                         <i class="fa-sharp fa-solid fa-share-nodes fa-lg" style="color: #3a12af;"></i>
                         <span>مشاركة</span>
                     </div>
-                    <div class="button" style="text-align:center; color: #3a12af;font-size:14px;" onclick="document.getElementById('import-results-input').click()">
+                    <div class="button" style="text-align:center; color: #3a12af;font: size 12px;" onclick="document.getElementById('import-results-input').click()">
                         <i class="fa-solid fa-file-import fa-lg" style="color: #3a12af;"></i>
                         <span>استيراد</span>
                     </div>
@@ -810,7 +815,11 @@
             }
             updateBottomNavVisibility();
             if (pageId === 'enter-scores-page') loadStagesForEnterScores();
-            if (pageId === 'stage-detail-page') loadShootersForStage();
+            if (pageId === 'stage-detail-page') {
+                loadShootersForStage();
+                const searchInput = document.getElementById('search-shooters-input');
+                if (searchInput) searchInput.value = '';
+            }
             if (pageId === 'add-score-page') loadScoreDetails();
             if (pageId === 'edit-shooters-page') loadShooters();
             if (pageId === 'build-stages-page') loadStages();
@@ -941,19 +950,29 @@
         }
 
         // دالة لتحميل الرماة لمرحلة معينة
+        // تعريف filteredShooters كمتغير عام
+        filteredShooters = [];
+        
+        // دالة لتحميل الرماة لمرحلة معينة
         function loadShootersForStage() {
             const shootersList = document.getElementById('shootersList');
             const teamFilter = document.getElementById('team-filter');
+            const searchInput = document.getElementById('search-shooters-input');
             if (!shootersList || !teamFilter || !currentStage) return;
+        
             const stageDetailTitle = document.getElementById('stage-detail-title');
             if (stageDetailTitle) stageDetailTitle.textContent = currentStage.name || "مرحلة غير معروفة";
+        
             let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
+        
             if (shooters.length === 0) {
                 shootersList.innerHTML = '<p>لا توجد رماة محفوظين.</p>';
                 teamFilter.innerHTML = '<option value="">لا توجد فرق</option>';
                 return;
             }
+        
+            // تحديث قائمة الفرق إذا لم تكن مملوءة
             if (teamFilter.options.length === 1) {
                 const teams = [...new Set(shooters.map(shooter => shooter.team).filter(team => team))];
                 teamFilter.innerHTML = '<option value="">جميع الفرق</option>';
@@ -964,15 +983,34 @@
                     teamFilter.appendChild(option);
                 });
             }
+        
             const selectedTeam = teamFilter.value.trim();
+            const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        
+            // تصفية الرماة بناءً على الفريق المختار
             filteredShooters = selectedTeam === "" ? shooters : shooters.filter(shooter => shooter.team === selectedTeam);
+        
+            // تصفية الرماة بناءً على استعلام البحث
+            if (searchQuery) {
+                filteredShooters = filteredShooters.filter(shooter => {
+                    const searchFields = [
+                        shooter.name?.toLowerCase().replace(/\s+/g, ' ') || '',
+                        shooter.number?.toLowerCase() || '',
+                        shooter.team?.toLowerCase().replace(/\s+/g, ' ') || ''
+                    ];
+                    return searchFields.some(field => field.includes(searchQuery));
+                });
+            }
+        
             shootersList.innerHTML = '';
             if (filteredShooters.length === 0) {
-                shootersList.innerHTML = '<p>لا توجد رماة في هذا الفريق.</p>';
+                shootersList.innerHTML = '<p>لا توجد رماة مطابقة.</p>';
                 return;
             }
+        
+            // عرض الرماة المصفاة
             const stageScores = shooterScores.filter(score => score.stageId === currentStage.name);
-            filteredShooters.forEach((shooter, index) => {
+            filteredShooters.forEach(shooter => {
                 const shooterDiv = document.createElement('div');
                 shooterDiv.className = 'shooter shooter-card';
                 const shooterScore = stageScores.find(score => score.shooterId === shooter.id);
@@ -980,29 +1018,27 @@
                     ? `النتيجة: ${shooterScore.totalScore} - التقدير: ${shooterScore.grade}`
                     : 'لم يتم التسجيل بعد';
                 shooterDiv.innerHTML = `
-                    <div onclick="selectShooter(${index})">
+                    <div onclick="selectShooter('${shooter.id}')">
                         <strong>${shooter.name || ''}</strong> - ${shooter.team || 'لا يوجد فريق'}
                         <span style="margin-right: 10px; color: #007bff;">${resultText}</span>
                     </div>
                 `;
                 shootersList.appendChild(shooterDiv);
             });
+        
+            // تحديث عدد الرماة المسجلين
             const stageDetailProgress = document.getElementById('stage-detail-progress');
             if (stageDetailProgress) {
                 stageDetailProgress.textContent = `${stageScores.length}/${filteredShooters.length}`;
             }
         }
-
+        
         // دالة لاختيار رامي
-        function selectShooter(index) {
-            if (index < 0 || index >= filteredShooters.length) {
-                console.error('مؤشر الرامي خارج النطاق:', index);
-                alert('خطأ في اختيار الرامي! يرجى المحاولة مرة أخرى.');
-                return;
-            }
-            currentShooter = filteredShooters[index];
+        function selectShooter(shooterId) {
+            const shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
+            currentShooter = shooters.find(shooter => shooter.id === shooterId);
             if (!currentShooter) {
-                console.error('لم يتم العثور على الرامي عند المؤشر:', index);
+                console.error('لم يتم العثور على الرامي مع المعرف:', shooterId);
                 alert("خطأ في اختيار الرامي! يرجى التأكد من قائمة الرماة.");
                 return;
             }
