@@ -957,10 +957,17 @@
             const shootersList = document.getElementById('shootersList');
             const teamFilter = document.getElementById('team-filter');
             const searchInput = document.getElementById('search-shooters-input');
-            if (!shootersList || !teamFilter || !currentStage) return;
-        
             const stageDetailTitle = document.getElementById('stage-detail-title');
-            if (stageDetailTitle) stageDetailTitle.textContent = currentStage.name || "مرحلة غير معروفة";
+            const stageDetailProgress = document.getElementById('stage-detail-progress');
+        
+            if (!shootersList || !teamFilter || !searchInput || !currentStage) {
+                console.error('عناصر DOM أو currentStage غير موجودة');
+                return;
+            }
+        
+            if (stageDetailTitle) {
+                stageDetailTitle.textContent = currentStage.name || "مرحلة غير معروفة";
+            }
         
             let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
@@ -968,11 +975,11 @@
             if (shooters.length === 0) {
                 shootersList.innerHTML = '<p>لا توجد رماة محفوظين.</p>';
                 teamFilter.innerHTML = '<option value="">لا توجد فرق</option>';
+                if (stageDetailProgress) stageDetailProgress.textContent = '0/0';
                 return;
             }
         
-            // تحديث قائمة الفرق إذا لم تكن مملوءة
-            if (teamFilter.options.length === 1) {
+            if (teamFilter.options.length <= 1) {
                 const teams = [...new Set(shooters.map(shooter => shooter.team).filter(team => team))];
                 teamFilter.innerHTML = '<option value="">جميع الفرق</option>';
                 teams.forEach(team => {
@@ -984,18 +991,16 @@
             }
         
             const selectedTeam = teamFilter.value.trim();
-            const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const searchQuery = normalizeArabic(searchInput.value.trim().toLowerCase());
         
-            // تصفية الرماة بناءً على الفريق المختار
-            filteredShooters = selectedTeam === "" ? shooters : shooters.filter(shooter => shooter.team === selectedTeam);
+            let filteredShooters = selectedTeam ? shooters.filter(shooter => shooter.team === selectedTeam) : [...shooters];
         
-            // تصفية الرماة بناءً على استعلام البحث
             if (searchQuery) {
                 filteredShooters = filteredShooters.filter(shooter => {
                     const searchFields = [
-                        shooter.name?.toLowerCase().replace(/\s+/g, ' ') || '',
-                        shooter.number?.toLowerCase() || '',
-                        shooter.team?.toLowerCase().replace(/\s+/g, ' ') || ''
+                        normalizeArabic(shooter.name?.toLowerCase() || ''),
+                        normalizeArabic(shooter.number?.toLowerCase() || ''),
+                        normalizeArabic(shooter.team?.toLowerCase() || '')
                     ];
                     return searchFields.some(field => field.includes(searchQuery));
                 });
@@ -1004,30 +1009,27 @@
             shootersList.innerHTML = '';
             if (filteredShooters.length === 0) {
                 shootersList.innerHTML = '<p>لا توجد رماة مطابقة.</p>';
-                return;
+            } else {
+                const stageScores = shooterScores.filter(score => score.stageId === currentStage.name);
+                filteredShooters.forEach(shooter => {
+                    const shooterDiv = document.createElement('div');
+                    shooterDiv.className = 'shooter shooter-card';
+                    const shooterScore = stageScores.find(score => score.shooterId === shooter.id);
+                    const resultText = shooterScore 
+                        ? `النتيجة: ${shooterScore.totalScore} - التقدير: ${shooterScore.grade}`
+                        : 'لم يتم التسجيل بعد';
+                    shooterDiv.innerHTML = `
+                        <div onclick="selectShooter('${shooter.id}')">
+                            <strong>${shooter.name || ''}</strong> - ${shooter.team || 'لا يوجد فريق'}
+                            <span style="margin-right: 10px; color: #007bff;">${resultText}</span>
+                        </div>
+                    `;
+                    shootersList.appendChild(shooterDiv);
+                });
             }
         
-            // عرض الرماة المصفاة
-            const stageScores = shooterScores.filter(score => score.stageId === currentStage.name);
-            filteredShooters.forEach(shooter => {
-                const shooterDiv = document.createElement('div');
-                shooterDiv.className = 'shooter shooter-card';
-                const shooterScore = stageScores.find(score => score.shooterId === shooter.id);
-                let resultText = shooterScore 
-                    ? `النتيجة: ${shooterScore.totalScore} - التقدير: ${shooterScore.grade}`
-                    : 'لم يتم التسجيل بعد';
-                shooterDiv.innerHTML = `
-                    <div onclick="selectShooter('${shooter.id}')">
-                        <strong>${shooter.name || ''}</strong> - ${shooter.team || 'لا يوجد فريق'}
-                        <span style="margin-right: 10px; color: #007bff;">${resultText}</span>
-                    </div>
-                `;
-                shootersList.appendChild(shooterDiv);
-            });
-        
-            // تحديث عدد الرماة المسجلين
-            const stageDetailProgress = document.getElementById('stage-detail-progress');
             if (stageDetailProgress) {
+                const stageScores = shooterScores.filter(score => score.stageId === currentStage.name);
                 stageDetailProgress.textContent = `${stageScores.length}/${filteredShooters.length}`;
             }
         }
@@ -1865,6 +1867,47 @@
                 localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
                 loadShootingDetails();
                 loadResults();
+                event.target.value = '';
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        function normalizeArabic(text) {
+            if (!text || typeof text !== 'string') return '';
+            return text
+                .replace(/[\u0617-\u061A\u064B-\u065F]/g, '') // إزالة الحركات
+                .replace(/\s+/g, ' ') // إزالة الفراغات الزائدة
+                .trim();
+        }
+        function importShooters(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: ['name', 'rank', 'number', 'team'], range: 1 });
+                let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
+                let duplicateNumbers = [];
+                jsonData.forEach(shooter => {
+                    if (shooter.number && shooters.some(s => s.number === shooter.number)) {
+                        duplicateNumbers.push(shooter.number);
+                        return;
+                    }
+                    shooters.push({
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        name: normalizeArabic(shooter.name || ''),
+                        rank: normalizeArabic(shooter.rank || ''),
+                        number: (shooter.number || '').toString().trim(),
+                        team: normalizeArabic(shooter.team || 'Team 1')
+                    });
+                });
+                if (duplicateNumbers.length > 0) {
+                    alert(`تم العثور على أرقام مكررة: ${duplicateNumbers.join(', ')}. تم تجاهل السجلات المكررة.`);
+                }
+                localStorage.setItem('shooters', JSON.stringify(shooters));
+                loadShooters();
+                alert('تم استيراد الرماة بنجاح!');
                 event.target.value = '';
             };
             reader.readAsArrayBuffer(file);
