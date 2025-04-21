@@ -582,7 +582,7 @@
                     <span></span>
                 </div>
                 <h1 style="text-align: center;">النتائج</h1>
-                <div class="button secondary" style="color: red; font-size:large; margin-inline-start: 30%;" onclick="clearAllResults()">
+                <div class="button secondary" style="color: red; font-size:large; margin-inline-start: 30%;" onclick="deleteAllResults()">
                     <i class="fa-solid fa-trash-can"></i>
                 </div>
             </div>
@@ -1536,12 +1536,82 @@
         }
 
         // دالة لحذف جميع النتائج
-        function clearAllResults() {
-            if (confirm('هل أنت متأكد من حذف جميع النتائج؟')) {
-                localStorage.removeItem('shooterScores');
-                loadResults();
-                alert('تم حذف جميع النتائج!');
+        function deleteAllResults() {
+            const stageFilter = document.getElementById('stage-filter-details');
+            const searchInput = document.getElementById('search-input');
+        
+            if (!stageFilter || !searchInput) {
+                console.error('عناصر DOM غير موجودة');
+                return;
             }
+        
+            // استرجاع البيانات
+            let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
+            let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
+            let stages = JSON.parse(localStorage.getItem('stages') || '[]');
+            const selectedStage = stageFilter.value ? stageFilter.value.trim() : '';
+            const searchQuery = searchInput.value ? normalizeArabic(searchInput.value.trim().toLowerCase()) : '';
+        
+            // التحقق من وجود معايير تصفية
+            if (!selectedStage && !searchQuery) {
+                alert('يرجى تحديد مرحلة أو إدخال استعلام بحث لحذف النتائج المصفاة. لا يمكن حذف جميع البيانات بدون تصفية.');
+                return;
+            }
+        
+            // تصفية النتائج بناءً على المرحلة المختارة
+            let filteredScores = selectedStage === ""
+                ? shooterScores
+                : shooterScores.filter(score => score.stageId.trim() === selectedStage);
+        
+            // تصفية النتائج بناءً على استعلام البحث
+            if (searchQuery) {
+                filteredScores = filteredScores.filter(score => {
+                    const shooter = shooters.find(s => s.id === score.shooterId);
+                    const stage = stages.find(s => s.name === score.stageId);
+                    if (!shooter || !stage) return false;
+        
+                    const searchFields = [
+                        normalizeArabic(shooter.name?.toLowerCase() || ''),
+                        normalizeArabic(shooter.number?.toLowerCase() || ''),
+                        normalizeArabic(shooter.team?.toLowerCase() || ''),
+                        normalizeArabic(score.stageId?.toLowerCase() || ''),
+                        normalizeArabic(new Date(stage.date).toLocaleDateString('ar-EG')?.toLowerCase() || '')
+                    ];
+        
+                    return searchFields.some(field => field.includes(searchQuery));
+                });
+            }
+        
+            // إذا لم تكن هناك نتائج مصفاة، لا حاجة للحذف
+            if (filteredScores.length === 0) {
+                alert('لا توجد نتائج مصفاة للحذف بناءً على المعايير المحددة.');
+                return;
+            }
+        
+            // رسالة تأكيد مع عدد النتائج التي سيتم حذفها
+            let deleteMessage = `هل أنت متأكد من حذف ${filteredScores.length} نتيجة مصفاة؟`;
+            if (selectedStage) deleteMessage += `\nالمرحلة: ${selectedStage}`;
+            if (searchQuery) deleteMessage += `\nاستعلام البحث: ${searchInput.value}`;
+            if (!confirm(deleteMessage)) {
+                return;
+            }
+        
+            // استخراج معرفات النتائج المصفاة
+            const filteredScoreIds = filteredScores.map(score => score.shooterId + score.stageId);
+        
+            // تصفية shooterScores للاحتفاظ بالنتائج غير المصفاة فقط
+            shooterScores = shooterScores.filter(score => {
+                const scoreId = score.shooterId + score.stageId;
+                return !filteredScoreIds.includes(scoreId);
+            });
+        
+            // تحديث localStorage
+            localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
+        
+            // إعادة تحميل البيانات لتحديث الجدول
+            loadShootingDetails();
+        
+            alert('تم حذف النتائج المصفاة بنجاح!');
         }
 
         // دالة لتحميل تفاصيل الرماية
