@@ -414,9 +414,13 @@
                     <i class="fa-solid fa-arrow-right"></i>
                 </div>
                 <h2 style="text-align: center;">إدخال النتائج</h2>
-                <div onclick="saveShooterScore()" style="font-size: 24px; margin-right: 20px;">
+                <div onclick="deleteShooterScore()" style="font-size: 24px; margin-block-start: 2%;">
+                    <i class="fa-solid fa-trash" style="color: #dc3545;"></i>
+                </div>
+                <div onclick="saveShooterScore()" style="font-size: 24px; margin-block-start: 5%;">
                     <i class="fa-sharp fa-solid fa-floppy-disk" style="color: #3a12af;"></i>
                 </div>
+               
             </div>
             <div style="margin-bottom: 15px;">
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> الرامي   :  <span id="shooter-name"></span></div>
@@ -1958,6 +1962,77 @@
                 event.target.value = '';
             };
             reader.readAsArrayBuffer(file);
+        }
+        function deleteShooterScore() {
+            if (!currentShooter || !currentStage) {
+                alert('لا يوجد رامي أو مرحلة محددة لحذف النتيجة.');
+                return;
+            }
+        
+            let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
+            
+            // البحث عن النتيجة المرتبطة بالرامي والمرحلة الحالية
+            const scoreIndex = shooterScores.findIndex(
+                score => score.shooterId === currentShooter.id && score.stageId === currentStage.name
+            );
+        
+            if (scoreIndex === -1) {
+                alert('لا توجد نتيجة مسجلة لهذا الرامي في هذه المرحلة.');
+                return;
+            }
+        
+            // تأكيد الحذف
+            if (!confirm(`هل أنت متأكد من حذف نتيجة الرامي ${currentShooter.name} في المرحلة ${currentStage.name}؟`)) {
+                return;
+            }
+        
+            // حذف النتيجة
+            shooterScores.splice(scoreIndex, 1);
+            localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
+        
+            // إعادة تعيين حقول الإدخال إلى القيم الافتراضية
+            document.getElementById('shotsA').value = '0';
+            document.getElementById('shotsC').value = '0';
+            document.getElementById('shotsD').value = '0';
+            document.getElementById('shotsM').value = '0';
+            document.getElementById('result').textContent = '';
+        
+            alert('تم حذف النتيجة بنجاح! يمكنك الآن تسجيل نتيجة جديدة.');
+        }
+        
+        // تحديث دالة selectShooter لعرض النتيجة المسجلة إن وجدت
+        function selectShooter(shooterId) {
+            const shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
+            currentShooter = shooters.find(shooter => shooter.id === shooterId);
+            if (!currentShooter) return;
+        
+            showPage('add-score-page');
+            document.getElementById('shooter-name').textContent = currentShooter.name || '';
+            document.getElementById('stage-name').textContent = currentStage.name || '';
+            document.getElementById('stage-date-in-score').textContent = currentStage.date || '';
+            document.getElementById('stage-rounds').textContent = currentStage.rounds || '';
+        
+            // البحث عن النتيجة المسجلة إن وجدت
+            const shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
+            const existingScore = shooterScores.find(
+                score => score.shooterId === currentShooter.id && score.stageId === currentStage.name
+            );
+        
+            // إذا كانت هناك نتيجة مسجلة، عرضها في الحقول
+            if (existingScore) {
+                document.getElementById('shotsA').value = existingScore.shotsA || '0';
+                document.getElementById('shotsC').value = existingScore.shotsC || '0';
+                document.getElementById('shotsD').value = existingScore.shotsD || '0';
+                document.getElementById('shotsM').value = existingScore.shotsM || '0';
+                document.getElementById('result').textContent = `النتيجة: ${existingScore.totalScore} - التقدير: ${existingScore.grade}`;
+            } else {
+                // إعادة تعيين الحقول إلى القيم الافتراضية إذا لم تكن هناك نتيجة
+                document.getElementById('shotsA').value = '0';
+                document.getElementById('shotsC').value = '0';
+                document.getElementById('shotsD').value = '0';
+                document.getElementById('shotsM').value = '0';
+                document.getElementById('result').textContent = '';
+            }
         }
     </script>
 </body>
