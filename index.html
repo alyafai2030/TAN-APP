@@ -643,20 +643,10 @@
                 </div>
             </div>
             <input type="file" id="import-results-input" accept=".xlsx, .xls" style="display: none;" onchange="importResults(event)">
-            </div>
-            <div class="form-group">
-                <label for="stage-filter-details">اختر المرحلة:</label>
-                <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.4em;">
-                    <select id="stage-filter-details" onchange="loadShootingDetails(); updateStageDateDetails();">
-                        <option value=""></option>
-                    </select>
-                    <span id="stage-date-display-details" style="color: #30336b;"></span>
-                </div>
-            </div>
             <!-- إضافة شريط البحث -->
             <div class="form-group" style="position: relative;">
-                <label for="search-input">البحث:</label>
-                <input type="text" id="search-input" placeholder="ابحث باسم الرامي، الرقم، الفريق، المرحلة، أو التاريخ" oninput="loadShootingDetails()">
+                <label for="search-input-details">البحث:</label>
+                <input type="text" id="search-input-details" placeholder="ابحث باسم الرامي، الرقم، الفريق، الرماية، أو التاريخ" oninput="loadShootingDetails()">
                 <i class="fas fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #3a12af;"></i>
             </div>
             <div class="results-table" style="font-size: 12px;">
@@ -668,7 +658,7 @@
                             <th>الطلقات</th>
                             <th>المسافة</th>
                             <th>السلاح</th>
-                            <th>الدرجة</th>
+                            <th>النقاط</th>
                         </tr>
                     </thead>
                     <tbody id="stagesTableBody"></tbody>
@@ -681,7 +671,7 @@
                             <th>الرتبة</th>
                             <th>الرقم</th>
                             <th>اسم الرامي</th>
-                            <th>المرحلة</th>
+                            <th>الرماية</th>
                             <th>A</th>
                             <th>C</th>
                             <th>D</th>
@@ -1591,83 +1581,76 @@
         function loadShootingDetails() {
             const detailsTable = document.getElementById('shootingDetailsTable');
             const stagesTableBody = document.getElementById('stagesTableBody');
-            const stageFilter = document.getElementById('stage-filter-details');
-            const searchInput = document.getElementById('search-input');
-        
+            const searchInput = document.getElementById('search-input-details');    
+
             // التحقق من وجود جميع العناصر
-            if (!detailsTable || !stagesTableBody || !stageFilter || !searchInput) {
+            if (!detailsTable || !stagesTableBody || !searchInput) {
                 console.error('عناصر DOM غير موجودة: ', {
                     detailsTable: !!detailsTable,
                     stagesTableBody: !!stagesTableBody,
-                    stageFilter: !!stageFilter,
                     searchInput: !!searchInput
                 });
                 return;
-            }
-        
+            }    
+
             // إعادة تعيين الجدولين
             detailsTable.innerHTML = '';
-            stagesTableBody.innerHTML = '';
-        
+            stagesTableBody.innerHTML = '';    
+
             // استرجاع البيانات
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
             let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
             let stages = JSON.parse(localStorage.getItem('stages') || '[]');
-            const selectedStage = stageFilter.value ? stageFilter.value.trim() : '';
-            const searchQuery = searchInput.value ? normalizeArabic(searchInput.value.trim().toLowerCase()) : '';
-        
-            // تصفية النتائج بناءً على المرحلة المختارة
-            let filteredScores = selectedStage === ""
-                ? shooterScores
-                : shooterScores.filter(score => score.stageId.trim() === selectedStage);
-        
+            const searchQuery = normalizeArabic(searchInput.value.trim().toLowerCase());    
+
             // تصفية النتائج بناءً على استعلام البحث
+            let filteredScores = shooterScores;
             if (searchQuery) {
-                filteredScores = filteredScores.filter(score => {
+                filteredScores = shooterScores.filter(score => {
                     const shooter = shooters.find(s => s.id === score.shooterId);
                     const stage = stages.find(s => s.name === score.stageId);
-                    if (!shooter || !stage) return false;
-        
+                    if (!shooter || !stage) return false;    
+
                     const searchFields = [
                         normalizeArabic(shooter.name?.toLowerCase() || ''),
                         normalizeArabic(shooter.number?.toLowerCase() || ''),
                         normalizeArabic(shooter.team?.toLowerCase() || ''),
                         normalizeArabic(score.stageId?.toLowerCase() || ''),
-                        normalizeArabic(new Date(stage.date).toLocaleDateString('ar-EG')?.toLowerCase() || '')
-                    ];
-        
+                        normalizeArabic(stage.date?.toLowerCase() || '')
+                    ];    
+
                     return searchFields.some(field => field.includes(searchQuery));
                 });
-            }
-        
+            }    
+
             if (filteredScores.length === 0) {
                 detailsTable.innerHTML = '<tr><td colspan="10">لا توجد نتائج مطابقة.</td></tr>';
                 stagesTableBody.innerHTML = '<tr><td colspan="6">لا توجد نتائج مطابقة.</td></tr>';
                 return;
-            }
-        
+            }    
+
             // تحميل جدول التفاصيل
             filteredScores.forEach((score, index) => {
                 const shooter = shooters.find(s => s.id === score.shooterId);
                 const stage = stages.find(s => s.name === score.stageId);
-                if (!shooter || !stage) return;
-        
+                if (!shooter || !stage) return;    
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${shooter.rank || 'فارغ'}</td>
                     <td>${shooter.number || '-'}</td>
                     <td>${shooter.name || 'رامي غير موجود'}</td>
                     <td>${score.stageId || '-'}</td>
-                    <td>${score.shotsA || 0}</td>
-                    <td>${score.shotsC || 0}</td>
-                    <td>${score.shotsD || 0}</td>
-                    <td>${score.shotsM || 0}</td>
+                    <td>${score.scores.A || 0}</td>
+                    <td>${score.scores.C || 0}</td>
+                    <td>${score.scores.D || 0}</td>
+                    <td>${score.scores.M || 0}</td>
                     <td>${score.totalScore || 0}</td>
                     <td>${score.grade || '-'}</td>
                 `;
                 detailsTable.appendChild(row);
-            });
-        
+            });    
+
             // تحميل جدول التواريخ
             const stageMap = new Map();
             filteredScores.forEach(score => {
@@ -1675,8 +1658,8 @@
                 if (stage && !stageMap.has(stage.name)) {
                     stageMap.set(stage.name, stage);
                 }
-            });
-        
+            });    
+
             stageMap.forEach(stage => {
                 const row = document.createElement('tr');
                 const shootersInStage = shooters.filter(s => filteredScores.some(score => score.shooterId === s.id && score.stageId === stage.name));
@@ -1701,50 +1684,44 @@
                 .trim();
         }
         function shareShootingDetails() {
-            const stageFilter = document.getElementById('stage-filter-details');
-            const searchInput = document.getElementById('search-input');
-            if (!stageFilter || !searchInput) {
+            const searchInput = document.getElementById('search-input-details');
+            if (!searchInput) {
                 alert('خطأ في تحميل التفاصيل للمشاركة.');
                 return;
             }
-        
+    
             // استرجاع البيانات من localStorage
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
             let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
             let stages = JSON.parse(localStorage.getItem('stages') || '[]');
-            const selectedStage = stageFilter.value.trim();
-            const searchQuery = searchInput.value.trim().toLowerCase();
-        
-            // تصفية النتائج بناءً على المرحلة المختارة
-            let filteredScores = selectedStage === ""
-                ? shooterScores
-                : shooterScores.filter(score => score.stageId.trim() === selectedStage);
-        
+            const searchQuery = normalizeArabic(searchInput.value.trim().toLowerCase());
+    
             // تصفية النتائج بناءً على استعلام البحث
+            let filteredScores = shooterScores;
             if (searchQuery) {
-                filteredScores = filteredScores.filter(score => {
+                filteredScores = shooterScores.filter(score => {
                     const shooter = shooters.find(s => s.id === score.shooterId);
                     const stage = stages.find(s => s.name === score.stageId);
                     const searchFields = [
-                        shooter?.name?.toLowerCase() || '',
-                        shooter?.number?.toLowerCase() || '',
-                        shooter?.team?.toLowerCase() || '',
-                        score.stageId?.toLowerCase() || '',
-                        stage?.date?.toLowerCase() || ''
+                        normalizeArabic(shooter?.name?.toLowerCase() || ''),
+                        normalizeArabic(shooter?.number?.toLowerCase() || ''),
+                        normalizeArabic(shooter?.team?.toLowerCase() || ''),
+                        normalizeArabic(score.stageId?.toLowerCase() || ''),
+                        normalizeArabic(stage?.date?.toLowerCase() || '')
                     ];
                     return searchFields.some(field => field.includes(searchQuery));
                 });
             }
-        
+    
             if (filteredScores.length === 0) {
                 alert('لا توجد تفاصيل مطابقة للمشاركة!');
                 return;
             }
-        
+    
             // إنشاء محتوى CSV
             let csvContent = '\uFEFF'; // إضافة BOM لدعم اللغة العربية في Excel
-            csvContent  += 'الرتبة,الرقم,الاسم,الفريق,الرماية,الميدان,التاريخ,السلاح,المسافة,الطلقات,A,C,D,M,النتيجة,التقدير\n';
-        
+            csvContent += 'الرتبة,الرقم,الاسم,الفريق,الرماية,الميدان,التاريخ,السلاح,المسافة,الطلقات,A,C,D,M,النتيجة,التقدير\n';
+    
             // إضافة بيانات الرماة
             filteredScores.forEach(score => {
                 const shooter = shooters.find(s => s.id === score.shooterId);
@@ -1760,23 +1737,22 @@
                         stage.date || 'غير متوفر',
                         stage.gunName || '-',
                         stage.distance || '-',
-                        stage.rounds || 0,                      
+                        stage.rounds || 0,
                         score.scores.A || 0,
                         score.scores.C || 0,
                         score.scores.D || 0,
                         score.scores.M || 0,
                         score.totalScore || 0,
-                        score.grade || '-',
-                        '' // الملاحظات (فارغة حاليًا)
+                        score.grade || '-'
                     ].map(data => `"${(data + '').replace(/"/g, '""')}"`);
                     csvContent += rowData.join(',') + '\n';
                 }
             });
-        
+    
             // إنشاء ملف CSV
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const fileName = `تفاصيل_الرماية_${selectedStage || 'جميع_المراحل'}_بحث.csv`;
-        
+            const fileName = `تفاصيل_الرماية_بحث.csv`;
+    
             // محاولة المشاركة أو التنزيل
             if (navigator.share && navigator.canShare) {
                 const file = new File([blob], fileName, { type: 'text/csv' });
