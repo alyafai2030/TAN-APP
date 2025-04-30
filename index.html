@@ -550,7 +550,7 @@
             </div>
             <div class="form-group">
                 <label id="stage-date-label">تاريخ الرماية</label>
-                <input type="date" id="stageDate" placeholder="YYYY-MM-DD">
+                <input type="date" id="stageDate" placeholder="DD-MM-YYYY">
             </div>
             <div class="form-group">
                 <label id="gun-label">السلاح</label>
@@ -1323,20 +1323,41 @@
         // دالة لحفظ المرحلة
         function saveStage() {
             const stageName = document.getElementById('stageName').value.trim();
-            const stageRounds = parseInt(document.getElementById('stageRounds').value) || 0;
-            if (stageRounds <= 0) {
+            const stageRoundsInput = document.getElementById('stageRounds').value;
+            const stageDate = document.getElementById('stageDate').value;
+            const gunName = document.getElementById('gunName').value.trim();
+            const fieldName = document.getElementById('fieldName').value.trim();
+            const distance = document.getElementById('distance').value.trim();
+        
+            // التحقق من عدد الطلقات
+            const stageRounds = parseInt(stageRoundsInput) || 0;
+            if (stageRounds <= 0 || isNaN(stageRounds)) {
                 alert('الرجاء إدخال عدد صحيح للطلقات (أكبر من 0)');
                 return;
             }
+        
+            // التحقق من التاريخ
+            if (!stageDate || !/^\d{4}-\d{2}-\d{2}$/.test(stageDate)) {
+                alert('الرجاء إدخال تاريخ صالح بصيغة YYYY-MM-DD');
+                return;
+            }
+        
+            // التحقق من اسم المرحلة
+            if (!stageName) {
+                alert('الرجاء إدخال اسم المرحلة');
+                return;
+            }
+        
             const stageData = {
-                name: stageName || `الرماية ${JSON.parse(localStorage.getItem('stages') || '[]').length + 1}`,
+                name: stageName,
                 rounds: stageRounds,
                 points: stageRounds * 5,
-                date: document.getElementById('stageDate').value || new Date().toLocaleDateString('en-EG'),
-                gunName: document.getElementById('gunName').value.trim() || '',
-                fieldName: document.getElementById('fieldName').value.trim() || '',
-                distance: document.getElementById('distance').value.trim() || ''
+                date: stageDate,
+                gunName: gunName || '',
+                fieldName: fieldName || '',
+                distance: distance || ''
             };
+        
             let stages = JSON.parse(localStorage.getItem('stages') || '[]');
             if (editingStageIndex !== null) {
                 stages[editingStageIndex] = stageData;
@@ -2071,6 +2092,25 @@
                 document.getElementById('result').textContent = '';
             }
         }
+        // تعديل التاريخ من الاخطاء      
+        function fixInvalidDates() {
+            let stages = JSON.parse(localStorage.getItem('stages') || '[]');
+            stages = stages.map(stage => {
+                const isValidDate = stage.date && /^\d{4}-\d{2}-\d{2}$/.test(stage.date) && !isNaN(new Date(stage.date).getTime());
+                if (!isValidDate) {
+                    stage.date = "2025-01-01"; // تاريخ افتراضي
+                    console.warn(`تم تصحيح تاريخ غير صالح للمرحلة ${stage.name}: ${stage.date}`);
+                }
+                return stage;
+            });
+            localStorage.setItem('stages', JSON.stringify(stages));
+        }
+        
+        // استدعاء الدالة عند تحميل التطبيق
+        document.addEventListener('DOMContentLoaded', () => {
+            fixInvalidDates();
+            // استدعاء دوال التهيئة الأخرى مثل loadShooters أو loadResults
+        });
         console.error('عناصر DOM غير موجودة: ', {
             detailsTable: !!detailsTable,
             stagesTableBody: !!stagesTableBody,
