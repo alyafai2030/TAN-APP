@@ -320,6 +320,17 @@
             color: #555;
             margin-top: 5px;
         }
+        #storage-info {
+            font-weight: bold;
+            background-color: #e0f7fa;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #007bff;
+        }
+        #remaining-storage-percentage {
+            color: #007bff;
+        }
+
     </style>
 </head>
 <body>
@@ -338,6 +349,10 @@
                 <img class="slide" src="T1.png" alt="5">
             </div>
             <div class="controls"></div>
+            <!-- إضافة عنصر لعرض النسبة المتبقية -->
+            <div id="storage-info" style="text-align: center; margin-top: 10px; font-size: 14px; color: #333; width: 150px;margin: auto;">
+                نسبة التخزين : <span id="remaining-storage-percentage">...</span>%
+            </div>
             <img src="my4.png" alt="صورة رمزية">
         </div>
     </div>
@@ -790,7 +805,7 @@
             navItems.forEach(item => item.classList.remove('active'));
             let activeBtnId;
             switch (pageId) {
-                case 'home-page': activeBtnId = 'home-btn'; break;
+                case 'home-page': activeBtnId = 'home-btn';updateStorageInfo(); break; // تحديث النسبة المتبقية break;
                 case 'enter-scores-page': activeBtnId = 'enter-scores-btn'; break;
                 case 'build-stages-page': activeBtnId = 'build-stages-btn'; break;
                 case 'edit-shooters-page': activeBtnId = 'edit-shooters-btn'; break;
@@ -1090,6 +1105,7 @@
                 alert(translations[currentLang].saveSuccess);
             }
             localStorage.setItem('shooters', JSON.stringify(shooters));
+            updateStorageInfo(); // تحديث النسبة المتبقية
             if (shooterNameInput) shooterName.value = '';
             if (shooterRankInput) shooterRank.value = '';
             if (shooterNumberInput) shooterNumberInput.value = '';
@@ -1247,6 +1263,7 @@
                 alert(translations[currentLang].scoreSaved);
             }
             localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
+            updateStorageInfo(); // تحديث النسبة المتبقية
             document.getElementById('result').innerText = `النقاط: ${totalScore} - التقدير: ${grade}`;
             document.getElementById('result').classList.remove('error');
             showPage('stage-detail-page');
@@ -1366,6 +1383,7 @@
                 stages.push(stageData);
             }
             localStorage.setItem('stages', JSON.stringify(stages));
+            updateStorageInfo(); // تحديث النسبة المتبقية
             alert('تم حفظ المرحلة بنجاح!');
             showPage('build-stages-page');
         }
@@ -2108,7 +2126,34 @@
             });
             localStorage.setItem('stages', JSON.stringify(stages));
         }
+        // دالة لحساب حجم التخزين المحلي المستخدم (بالبايت)
+        function getLocalStorageSize() {
+            let total = 0;
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    total += ((localStorage[key].length + key.length) * 2); // حجم المفتاح والقيمة بالبايت
+                }
+            }
+            return total;
+        }
         
+        // دالة لحساب النسبة المتبقية من التخزين المحلي
+        function calculateRemainingStoragePercentage() {
+            const maxStorage = 5 * 1024 * 1024; // 5 ميغابايت بالبايت (الحد الأقصى في Safari)
+            const usedStorage = getLocalStorageSize();
+            const remainingStorage = maxStorage - usedStorage;
+            const remainingPercentage = (remainingStorage / maxStorage) * 100;
+            return remainingPercentage.toFixed(2); // إرجاع النسبة بدقة رقمين عشريين
+        }
+        
+        // دالة لتحديث عرض النسبة المتبقية
+        function updateStorageInfo() {
+            const percentageSpan = document.getElementById('remaining-storage-percentage');
+            if (percentageSpan) {
+                const remainingPercentage = calculateRemainingStoragePercentage();
+                percentageSpan.textContent = remainingPercentage;
+            }
+        }
         // استدعاء الدالة عند تحميل التطبيق
         document.addEventListener('DOMContentLoaded', () => {
             fixInvalidDates();
