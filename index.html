@@ -1538,69 +1538,72 @@
 
         // دالة لحذف جميع النتائج
         function deleteAllResults() {
-            const searchInput = document.getElementById('search-input');
-            if (!searchInput) {
-                console.error('عنصر شريط البحث غير موجود');
+            const shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
+            if (shooterScores.length === 0) {
+                alert('لا توجد نتائج محفوظة لحذفها.');
                 return;
             }
-        
-            // استرجاع البيانات
-            let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
-            let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
-            let stages = JSON.parse(localStorage.getItem('stages') || '[]');
-        
-            const searchQuery = normalizeArabic(searchInput.value.trim().toLowerCase());
-        
-            // التحقق من وجود استعلام بحث
-            if (!searchQuery) {
-                alert('يرجى إدخال استعلام بحث لحذف النتائج المصفاة.');
-                return;
+
+            // عرض مربع حوار لاختيار نوع الحذف
+            const choice = prompt(
+                'اختر نوع الحذف:\n' +
+                '1. حذف النتائج المصفاة بناءً على استعلام البحث\n' +
+                '2. حذف جميع النتائج\n\n' +
+                'أدخل الرقم 1 أو 2:'
+            );
+
+            if (!choice) return; // إذا ضغط المستخدم على "إلغاء"
+
+            if (choice === '1') {
+                // حذف النتائج المصفاة بناءً على استعلام البحث
+                const searchQuery = document.getElementById('search-input').value.toLowerCase();
+                if (!searchQuery) {
+                    alert('يرجى إدخال استعلام بحث لحذف النتائج المصفاة.');
+                    return;
+                }
+
+                const shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
+                const stages = JSON.parse(localStorage.getItem('stages') || '[]');
+                const filteredScores = shooterScores.filter(score => {
+                    const shooter = shooters.find(s => s.id === score.shooterId) || { name: 'رامي غير موجود', number: '', team: '-' };
+                    const stage = stages.find(s => s.name === score.stageId) || { name: 'رماية غير موجودة', date: 'غير متوفر' };
+                    const month = stage.date ? new Date(stage.date).toLocaleString('ar', { month: 'long' }) : '';
+
+                    return (
+                        shooter.name.toLowerCase().includes(searchQuery) ||
+                        shooter.number.toLowerCase().includes(searchQuery) ||
+                        shooter.team.toLowerCase().includes(searchQuery) ||
+                        stage.name.toLowerCase().includes(searchQuery) ||
+                        month.toLowerCase().includes(searchQuery)
+                    );
+                });
+
+                if (filteredScores.length === 0) {
+                    alert('لا توجد نتائج مطابقة لاستعلام البحث لحذفها.');
+                    return;
+                }
+
+                if (!confirm(`هل أنت متأكد من حذف ${filteredScores.length} نتيجة مصفاة بناءً على استعلام البحث: "${searchQuery}"؟`)) {
+                    return;
+                }
+
+                const remainingScores = shooterScores.filter(score => !filteredScores.includes(score));
+                localStorage.setItem('shooterScores', JSON.stringify(remainingScores));
+                loadResults();
+                alert('تم حذف النتائج المصفاة بنجاح!');
+            } else if (choice === '2') {
+                // حذف جميع النتائج
+                if (!confirm(`هل أنت متأكد من حذف جميع النتائج (${shooterScores.length})؟`)) {
+                    return;
+                }
+
+                localStorage.setItem('shooterScores', JSON.stringify([]));
+                loadResults();
+                alert('تم حذف جميع النتائج بنجاح!');
+            } else {
+                alert('اختيار غير صالح. يرجى اختيار 1 أو 2.');
             }
-        
-            // تصفية النتائج بناءً على استعلام البحث
-            let filteredScores = shooterScores.filter(score => {
-                const shooter = shooters.find(s => s.id === score.shooterId);
-                const stage = stages.find(s => s.name === score.stageId);
-                if (!shooter || !stage) return false;
-        
-                const searchFields = [
-                    normalizeArabic(shooter.name?.toLowerCase() || ''),
-                    normalizeArabic(shooter.number?.toLowerCase() || ''),
-                    normalizeArabic(shooter.team?.toLowerCase() || ''),
-                    normalizeArabic(score.stageId?.toLowerCase() || ''),
-                    normalizeArabic(stage.date?.toLowerCase() || '')
-                ];
-        
-                return searchFields.some(field => field.includes(searchQuery));
-            });
-        
-            // التحقق من وجود نتائج مصفاة
-            if (filteredScores.length === 0) {
-                alert('لا توجد نتائج مصفاة للحذف بناءً على استعلام البحث.');
-                return;
-            }
-        
-            // رسالة تأكيد مع عدد النتائج التي سيتم حذفها
-            let deleteMessage = `هل أنت متأكد من حذف ${filteredScores.length} نتيجة مصفاة بناءً على استعلام البحث: "${searchInput.value}"؟`;
-            if (!confirm(deleteMessage)) {
-                return;
-            }
-        
-            // حذف النتائج المصفاة فقط
-            const filteredScoreKeys = filteredScores.map(score => `${score.shooterId}_${score.stageId}`);
-            shooterScores = shooterScores.filter(score => {
-                const scoreKey = `${score.shooterId}_${score.stageId}`;
-                return !filteredScoreKeys.includes(scoreKey);
-            });
-        
-            // تحديث localStorage
-            localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
-        
-            // إعادة تحميل النتائج
-            loadResults();
-        
-            alert('تم حذف النتائج المصفاة بنجاح!');
-        }        // دالة لتحميل تفاصيل الرماية
+        }
         function loadShootingDetails() {
             const detailsTable = document.getElementById('shootingDetailsTable');
             const stagesTableBody = document.getElementById('stagesTableBody');
