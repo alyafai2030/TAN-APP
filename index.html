@@ -353,7 +353,7 @@
             <div id="storage-info" style="text-align: center; margin-top: 10px; font-size: 14px; color: #333; width: 150px;margin: auto;">
                 نسبة التخزين : <span id="remaining-storage-percentage">...</span>%
             </div>
-            <img src="my4.png" alt="صورة رمزية" style="width: 90px; height: 90px; display: block; margin-top: 30px; margin-left: auto; margin-right: auto;">
+            <img src="my4.png" alt="صورة رمزية" style="width: 90px; height: 90px; display: block; margin-top: 20px; margin-left: auto; margin-right: auto;">
         </div>
     </div>
     <!-- Bottom Navigation -->
@@ -1903,6 +1903,7 @@
                 }
         
                 localStorage.setItem('shooters', JSON.stringify(shooters));
+                updateStorageInfo(); // تحديث النسبة المتبقية
                 loadShooters();
                 alert('تم استيراد الرماة بنجاح!');
                 event.target.value = ''; // إعادة تعيين حقل الإدخال
@@ -2001,6 +2002,7 @@
                 }
         
                 localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
+                updateStorageInfo(); // تحديث النسبة المتبقية
                 loadShootingDetails();
                 loadResults();
                 event.target.value = '';
@@ -2036,6 +2038,7 @@
                     alert(`تم العثور على أرقام مكررة: ${duplicateNumbers.join(', ')}. تم تجاهل السجلات المكررة.`);
                 }
                 localStorage.setItem('shooters', JSON.stringify(shooters));
+                updateStorageInfo(); // تحديث النسبة المتبقية
                 loadShooters();
                 alert('تم استيراد الرماة بنجاح!');
                 event.target.value = '';
