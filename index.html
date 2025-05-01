@@ -353,7 +353,7 @@
             <div id="storage-info" style="text-align: center; margin-top: 10px; font-size: 14px; color: #333; width: 150px;margin: auto;">
                 نسبة التخزين : <span id="remaining-storage-percentage">...</span>%
             </div>
-            <img src="my4.png" alt="صورة رمزية" style="width: 90px; height: 90px; display: block; margin-top: 20px; margin-left: auto; margin-right: auto;">
+            <img src="my4.png" alt="صورة رمزية" style="width: 90px; height: 90px; display: block; margin-top: 30px; margin-left: auto; margin-right: auto;">
         </div>
     </div>
     <!-- Bottom Navigation -->
@@ -2155,6 +2155,21 @@
             if (percentageSpan) {
                 const remainingPercentage = calculateRemainingStoragePercentage();
                 percentageSpan.textContent = remainingPercentage;
+            }
+        }
+        function testLocalStorageLimit() {
+            let test = 'test';
+            let i = 0;
+            try {
+                while (true) {
+                    localStorage.setItem('test' + i, test.repeat(100000));
+                    i++;
+                }
+            } catch (e) {
+                console.log('الحد الأقصى للتخزين المحلي: ' + (getLocalStorageSize() / 1024 / 1024) + ' ميغابايت');
+                for (let j = 0; j < i; j++) {
+                    localStorage.removeItem('test' + j);
+                }
             }
         }
         // استدعاء الدالة عند تحميل التطبيق
