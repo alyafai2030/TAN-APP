@@ -670,12 +670,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>التاريخ</th>
-                            <th>الفرق</th>
-                            <th>الطلقات</th>
-                            <th>المسافة</th>
-                            <th>السلاح</th>
-                            <th>النقاط</th>
+                           
                         </tr>
                     </thead>
                     <tbody id="stagesTableBody"></tbody>
@@ -685,6 +680,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th>ت</th>
                             <th>الرتبة</th>
                             <th>الرقم</th>
                             <th>اسم الرامي</th>
@@ -1681,6 +1677,7 @@
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
+                    <td>${index + 1}</td>
                     <td>${shooter.rank || 'فارغ'}</td>
                     <td>${shooter.number || '-'}</td>
                     <td>${shooter.name || 'رامي غير موجود'}</td>
@@ -1704,20 +1701,7 @@
                 }
             });    
 
-            stageMap.forEach(stage => {
-                const row = document.createElement('tr');
-                const shootersInStage = shooters.filter(s => filteredScores.some(score => score.shooterId === s.id && score.stageId === stage.name));
-                const teams = [...new Set(shootersInStage.map(s => s.team))].join(', ');
-                row.innerHTML = `
-                    <td>${stage.date ? new Date(stage.date).toLocaleDateString('ar-EG') : 'غير متوفر'}</td>
-                    <td>${teams || '-'}</td>
-                    <td>${stage.rounds || 0}</td>
-                    <td>${stage.distance || '-'}</td>
-                    <td>${stage.gunName || '-'}</td>
-                    <td>${stage.points || '-'}</td>
-                `;
-                stagesTableBody.appendChild(row);
-            });
+            
         }
         
         function normalizeArabic(text) {
@@ -1730,98 +1714,114 @@
         function shareShootingDetails() {
             const searchInput = document.getElementById('search-input-details');
             if (!searchInput) {
-                alert('خطأ في تحميل التفاصيل للمشاركة.');
+                alert('خطأ: حقل البحث غير موجود. يرجى التحقق من الصفحة.');
                 return;
             }
-    
+        
             // استرجاع البيانات من localStorage
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
             let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
             let stages = JSON.parse(localStorage.getItem('stages') || '[]');
             const searchQuery = normalizeArabic(searchInput.value.trim().toLowerCase());
-    
+        
             // تصفية النتائج بناءً على استعلام البحث
             let filteredScores = shooterScores;
             if (searchQuery) {
                 filteredScores = shooterScores.filter(score => {
                     const shooter = shooters.find(s => s.id === score.shooterId);
                     const stage = stages.find(s => s.name === score.stageId);
+                    if (!shooter || !stage) return false;
                     const searchFields = [
-                        normalizeArabic(shooter?.name?.toLowerCase() || ''),
-                        normalizeArabic(shooter?.number?.toLowerCase() || ''),
-                        normalizeArabic(shooter?.team?.toLowerCase() || ''),
+                        normalizeArabic(shooter.name?.toLowerCase() || ''),
+                        normalizeArabic(shooter.number?.toLowerCase() || ''),
+                        normalizeArabic(shooter.team?.toLowerCase() || ''),
                         normalizeArabic(score.stageId?.toLowerCase() || ''),
-                        normalizeArabic(stage?.date?.toLowerCase() || '')
+                        normalizeArabic(stage.date?.toLowerCase() || '')
                     ];
                     return searchFields.some(field => field.includes(searchQuery));
                 });
             }
-    
+        
             if (filteredScores.length === 0) {
-                alert('لا توجد تفاصيل مطابقة للمشاركة!');
+                alert('لا توجد نتائج مطابقة للمشاركة.');
                 return;
             }
-    
+        
             // إنشاء محتوى CSV
-            let csvContent = '\uFEFF'; // إضافة BOM لدعم اللغة العربية في Excel
-            csvContent += 'الرتبة,الرقم,الاسم,الفريق,الرماية,الميدان,التاريخ,السلاح,المسافة,الطلقات,A,C,D,M,النتيجة,التقدير\n';
-    
-            // إضافة بيانات الرماة
-            filteredScores.forEach(score => {
+            let csvContent = '\uFEFF'; // BOM لدعم اللغة العربية في Excel
+            csvContent += 'ت,الرتبة,الرقم,الاسم,الفريق,الرماية,الميدان,التاريخ,السلاح,المسافة,الطلقات,A,C,D,M,النتيجة,التقدير\n';
+        
+            // إضافة بيانات النتائج
+            filteredScores.forEach((score, index) => {
                 const shooter = shooters.find(s => s.id === score.shooterId);
                 const stage = stages.find(s => s.name === score.stageId);
-                if (shooter && stage) {
-                    const rowData = [
-                        shooter.rank || 'فارغ',
-                        shooter.number || '-',
-                        shooter.name || 'رامي غير موجود',
-                        shooter.team || '-',
-                        score.stageId,
-                        stage.fieldName || '-',
-                        stage.date || 'غير متوفر',
-                        stage.gunName || '-',
-                        stage.distance || '-',
-                        stage.rounds || 0,
-                        score.scores.A || 0,
-                        score.scores.C || 0,
-                        score.scores.D || 0,
-                        score.scores.M || 0,
-                        score.totalScore || 0,
-                        score.grade || '-'
-                    ].map(data => `"${(data + '').replace(/"/g, '""')}"`);
-                    csvContent += rowData.join(',') + '\n';
-                }
+                if (!shooter || !stage) return;
+        
+                const rowData = [
+                    index + 1,
+                    shooter.rank || 'غير متوفر',
+                    shooter.number || '-',
+                    shooter.name || 'رامي غير معروف',
+                    shooter.team || '-',
+                    score.stageId || '-',
+                    stage.fieldName || '-',
+                    stage.date || 'غير متوفر',
+                    stage.gunName || '-',
+                    stage.distance || '-',
+                    stage.rounds || 0,
+                    score.scores.A || 0,
+                    score.scores.C || 0,
+                    score.scores.D || 0,
+                    score.scores.M || 0,
+                    score.totalScore || 0,
+                    score.grade || '-'
+                ].map(data => `"${(data + '').replace(/"/g, '""')}"`); // التعامل مع الفواصل والاقتباسات
+                csvContent += rowData.join(',') + '\n';
             });
-    
-            // إنشاء ملف CSV
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const fileName = `تفاصيل_الرماية_بحث.csv`;
-    
-            // محاولة المشاركة أو التنزيل
-            if (navigator.share && navigator.canShare) {
-                const file = new File([blob], fileName, { type: 'text/csv' });
-                const shareData = { files: [file] };
-                if (navigator.canShare(shareData)) {
-                    navigator.share(shareData).catch(error => {
-                        console.error('خطأ في مشاركة الملف:', error);
+        
+            try {
+                // إنشاء ملف CSV
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const fileName = `تفاصيل_الرماية_${new Date().toISOString().split('T')[0]}.csv`;
+        
+                // محاولة المشاركة
+                if (navigator.share && navigator.canShare) {
+                    const file = new File([blob], fileName, { type: 'text/csv' });
+                    const shareData = { files: [file], title: 'تفاصيل الرماية التنشيطية' };
+                    if (navigator.canShare(shareData)) {
+                        navigator.share(shareData).catch(error => {
+                            console.error('خطأ أثناء المشاركة:', error);
+                            fallbackToDownload(blob, fileName);
+                            alert('فشلت المشاركة. تم تنزيل الملف بدلاً من ذلك.');
+                        });
+                    } else {
                         fallbackToDownload(blob, fileName);
-                    });
+                        alert('مشاركة الملفات غير مدعومة. تم تنزيل الملف.');
+                    }
                 } else {
                     fallbackToDownload(blob, fileName);
+                    alert('تم تنزيل ملف النتائج بنجاح.');
                 }
-            } else {
-                fallbackToDownload(blob, fileName);
+            } catch (error) {
+                console.error('خطأ أثناء إنشاء أو مشاركة الملف:', error);
+                alert('حدث خطأ أثناء محاولة مشاركة النتائج. يرجى المحاولة مرة أخرى.');
             }
         }
+        
         function fallbackToDownload(blob, fileName) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            try {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('خطأ أثناء تنزيل الملف:', error);
+                alert('فشل تنزيل الملف. يرجى المحاولة مرة أخرى.');
+            }
         }
         function switchLanguage(lang) {
             currentLang = lang;
