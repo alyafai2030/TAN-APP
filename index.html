@@ -585,7 +585,7 @@
             </div>
             <div class="form-group">
                 <label id="points-label">النقاط</label>
-                <input type="number" id="Total_points" min="0" placeholder="النقاط" readonly>
+                <input type="number" id="Total_points" min="0" placeholder="النقاط">
             </div>
         </div>
     </div>
@@ -707,12 +707,7 @@
         let currentShooter = null;
         let filteredShooters = [];
 
-        const scoring = {
-            'A': 5,
-            'C': 4,
-            'D': 3,
-            'M': 0
-        };
+        
 
         const translations = {
             ar: {
@@ -785,7 +780,19 @@
             }
         };
         let currentLang = 'ar';
-
+// استبدل كائن scoring بهذه الدالة
+        function getScoring(rounds, stagePoints) {
+            if (rounds === 10 && stagePoints === 100) {
+                return { A: 10, C: 8, D: 6, M: 0 };
+            } else if (rounds === 10 && stagePoints === 50) {
+                return { A: 5, C: 4, D: 3, M: 0 };
+            } else if (rounds === 20) {
+                return { A: 5, C: 4, D: 3, M: 0 };
+            } else {
+                // القيم الافتراضية للحالات غير المحددة
+                return { A: 5, C: 4, D: 3, M: 0 };
+            }
+        }
         // دالة لعرض الصفحة المحددة
         function showPage(pageId) {
             console.log(`محاولة عرض الصفحة: ${pageId}`);
@@ -1055,10 +1062,15 @@
             const stageName = document.getElementById('stage-name');
             const stageDateInScore = document.getElementById('stage-date-in-score');
             const stageRounds = document.getElementById('stage-rounds');
+            const scoringSystem = document.getElementById('scoring-system');
             if (shooterName) shooterName.textContent = `${currentShooter.name || ''}`;
             if (stageName) stageName.textContent = currentStage.name || 'غير متوفر';
             if (stageDateInScore) stageDateInScore.textContent = currentStage.date || "غير متوفر";
             if (stageRounds) stageRounds.textContent = currentStage.rounds || 0;
+            if (scoringSystem) {
+                const scoring = getScoring(currentStage.rounds, currentStage.points);
+                scoringSystem.textContent = `A=${scoring.A}, C=${scoring.C}, D=${scoring.D}, M=${scoring.M}`;
+            }
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
             const existingScore = shooterScores.find(score => score.shooterId === currentShooter.id && score.stageId === currentStage.name);
             document.getElementById('shotsA').value = existingScore?.scores.A || 0;
@@ -1066,7 +1078,6 @@
             document.getElementById('shotsD').value = existingScore?.scores.D || 0;
             document.getElementById('shotsM').value = existingScore?.scores.M || 0;
         }
-
         // دالة للتحقق من صحة الإدخال
         function validateInput(input) {
             if (input.value < 0) input.value = 0;
@@ -1233,8 +1244,10 @@
                 document.getElementById('result').classList.add('error');
                 return;
             }
+            // الحصول على نظام التسجيل بناءً على عدد الطلقات ونقاط المرحلة
+            const scoring = getScoring(currentStage.rounds, currentStage.points);
             const totalScore = (A * scoring.A) + (C * scoring.C) + (D * scoring.D) + (M * scoring.M);
-            const maxScore = currentStage.rounds * 5;
+            const maxScore = currentStage.rounds * scoring.A; // النقاط القصوى بناءً على A
             let grade;
             const percentage = (totalScore / maxScore) * 100;
             if (percentage >= 90) grade = "ممتاز";
@@ -1259,13 +1272,12 @@
                 alert(translations[currentLang].scoreSaved);
             }
             localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
-            updateStorageInfo(); // تحديث النسبة المتبقية
+            updateStorageInfo();
             document.getElementById('result').innerText = `النقاط: ${totalScore} - التقدير: ${grade}`;
             document.getElementById('result').classList.remove('error');
             showPage('stage-detail-page');
             loadShootersForStage();
         }
-
         // دالة لعرض صفحة إضافة مرحلة
         function showAddStagePage() {
             editingStageIndex = null;
@@ -1341,6 +1353,7 @@
             const gunName = document.getElementById('gunName').value.trim();
             const fieldName = document.getElementById('fieldName').value.trim();
             const distance = document.getElementById('distance').value.trim();
+            const stagePoints = parseInt(document.getElementById('Total_points').value) || 0;
         
             // التحقق من عدد الطلقات
             const stageRounds = parseInt(stageRoundsInput) || 0;
@@ -1361,10 +1374,17 @@
                 return;
             }
         
+            // التحقق من نقاط المرحلة
+            if (stagePoints <= 0 || isNaN(stagePoints)) {
+                alert('الرجاء إدخال قيمة صحيحة للنقاط (أكبر من 0)');
+                return;
+            }
+        
+            // إنشاء كائن بيانات المرحلة
             const stageData = {
                 name: stageName,
                 rounds: stageRounds,
-                points: stageRounds * 5,
+                points: stagePoints,
                 date: stageDate,
                 gunName: gunName || '',
                 fieldName: fieldName || '',
@@ -1379,7 +1399,7 @@
                 stages.push(stageData);
             }
             localStorage.setItem('stages', JSON.stringify(stages));
-            updateStorageInfo(); // تحديث النسبة المتبقية
+            updateStorageInfo();
             alert('تم حفظ المرحلة بنجاح!');
             showPage('build-stages-page');
         }
@@ -1913,7 +1933,6 @@
         function importResults(event) {
             const file = event.target.files[0];
             if (!file) return;
-        
             const reader = new FileReader();
             reader.onload = function (e) {
                 const data = new Uint8Array(e.target.result);
@@ -1923,49 +1942,41 @@
                     header: ['shooterName', 'shooterNumber', 'stageName', 'date', 'A', 'C', 'D', 'M'],
                     range: 1
                 });
-        
                 let shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
                 let stages = JSON.parse(localStorage.getItem('stages') || '[]');
                 let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
                 let errors = [];
                 let warnings = [];
-        
                 jsonData.forEach((result, index) => {
-                    // التحقق من وجود الرامي
                     const shooter = shooters.find(s => s.number === result.shooterNumber || s.name === result.shooterName);
                     if (!shooter) {
                         errors.push(`السطر ${index + 2}: الرامي "${result.shooterName}" أو الرقم "${result.shooterNumber}" غير موجود.`);
                         return;
                     }
-        
-                    // التحقق من وجود المرحلة
                     const stage = stages.find(s => s.name === result.stageName);
                     if (!stage) {
                         errors.push(`السطر ${index + 2}: المرحلة "${result.stageName}" غير موجودة.`);
                         return;
                     }
-        
-                    // تصحيح عدد الطلقات تلقائيًا
                     let A = parseInt(result.A) || 0;
                     let C = parseInt(result.C) || 0;
                     let D = parseInt(result.D) || 0;
                     let M = parseInt(result.M) || 0;
                     const totalShots = A + C + D + M;
-        
                     if (totalShots !== stage.rounds) {
                         const difference = stage.rounds - totalShots;
                         if (difference > 0) {
-                            M += difference; // إضافة الطلقات الناقصة إلى M
+                            M += difference;
                             warnings.push(`السطر ${index + 2}: عدد الطلقات (${totalShots}) أقل من المطلوب (${stage.rounds}) للمرحلة "${stage.name}". تمت إضافة ${difference} إلى M.`);
                         } else if (difference < 0) {
                             errors.push(`السطر ${index + 2}: عدد الطلقات (${totalShots}) أكبر من المطلوب (${stage.rounds}) للمرحلة "${stage.name}".`);
                             return;
                         }
                     }
-        
-                    // حساب النتيجة والتقدير
+                    // استخدام نظام التسجيل الديناميكي
+                    const scoring = getScoring(stage.rounds, stage.points);
                     const totalScore = A * scoring.A + C * scoring.C + D * scoring.D + M * scoring.M;
-                    const maxScore = stage.rounds * 5;
+                    const maxScore = stage.rounds * scoring.A;
                     const percentage = (totalScore / maxScore) * 100;
                     let grade;
                     if (percentage >= 90) grade = "ممتاز";
@@ -1973,8 +1984,6 @@
                     else if (percentage >= 70) grade = "جيد";
                     else if (percentage >= 60) grade = "متوسط";
                     else grade = "راسب";
-        
-                    // إضافة أو تحديث النتيجة
                     const scoreData = {
                         shooterId: shooter.id,
                         stageId: stage.name,
@@ -1982,7 +1991,6 @@
                         grade,
                         scores: { A, C, D, M }
                     };
-        
                     const existingScoreIndex = shooterScores.findIndex(score => score.shooterId === shooter.id && score.stageId === stage.name);
                     if (existingScoreIndex !== -1) {
                         shooterScores[existingScoreIndex] = scoreData;
@@ -1990,7 +1998,6 @@
                         shooterScores.push(scoreData);
                     }
                 });
-        
                 if (errors.length > 0) {
                     alert(`تم العثور على أخطاء أثناء الاستيراد:\n${errors.join('\n')}`);
                 }
@@ -2000,9 +2007,8 @@
                 if (errors.length === 0) {
                     alert('تم استيراد النتائج بنجاح!');
                 }
-        
                 localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
-                updateStorageInfo(); // تحديث النسبة المتبقية
+                updateStorageInfo();
                 loadShootingDetails();
                 loadResults();
                 event.target.value = '';
