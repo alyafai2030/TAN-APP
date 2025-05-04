@@ -438,7 +438,7 @@
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> الرامي   :  <span id="shooter-name"></span></div>
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;">  الرماية :  <span id="stage-name"></span></div>
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> التاريخ  :  <span id="stage-date-in-score"></span></div> 
-                <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> الطلقات  :  <span id="stage-rounds"></span>   النتيجة  :   <span id="max-points"> </span></div>
+                <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> الطلقات  :  <span id="stage-rounds"></span>  النتيجة  :  <span id="max-points"> </span></div>
             </div>
             <div class="input-container">
                 <label for="shotsA">A:</label>
@@ -524,7 +524,8 @@
                 </div>
                 <h1 style="text-align: center;">بناء المراحل</h1>
                 <div onclick="showAddStagePage()" style="font-size: 22px; margin-inline-start: 20%;">
-                    <i class="fa-solid fa-map fa-lg" style="color: #0b419d;"></i>
+                    <i class="fa-solid fa-map fa-lg " style="color: #0b419d;"></i>
+                    <span>+</span>
                 </div>
             </div>
             <table class="stages-table" id="stagesList">
@@ -806,7 +807,7 @@
             navItems.forEach(item => item.classList.remove('active'));
             let activeBtnId;
             switch (pageId) {
-                case 'home-page': activeBtnId = 'home-btn';updateStorageInfo(); break; // تحديث النسبة المتبقية break;
+                case 'home-page': activeBtnId = 'home-btn'; updateStorageInfo(); break;
                 case 'enter-scores-page': activeBtnId = 'enter-scores-btn'; break;
                 case 'build-stages-page': activeBtnId = 'build-stages-btn'; break;
                 case 'edit-shooters-page': activeBtnId = 'edit-shooters-btn'; break;
@@ -1038,24 +1039,19 @@
         }
         
         // دالة لاختيار رامي
-        function selectShooter(shooterId) {
-            const shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
-            currentShooter = shooters.find(shooter => shooter.id === shooterId);
-            if (!currentShooter) {
-                console.error('لم يتم العثور على الرامي مع المعرف:', shooterId);
-                alert("خطأ في اختيار الرامي! يرجى التأكد من قائمة الرماة.");
-                return;
-            }
-            showPage('add-score-page');
-        }
+       
 
+       
         // دالة لتحميل تفاصيل النتيجة
         function loadScoreDetails() {
+            console.log('تحميل تفاصيل النتيجة...');
             if (!currentShooter || !currentStage) {
+                console.error('لم يتم تحديد الرامي أو المرحلة');
                 alert('يرجى التأكد من اختيار رامي ومرحلة قبل إدخال النتائج.');
                 showPage('stage-detail-page');
                 return;
             }
+
             const shooterName = document.getElementById('shooter-name');
             const stageName = document.getElementById('stage-name');
             const stageDateInScore = document.getElementById('stage-date-in-score');
@@ -1065,43 +1061,55 @@
             const shotsC = document.getElementById('shotsC');
             const shotsD = document.getElementById('shotsD');
             const shotsM = document.getElementById('shotsM');
-        
-            if (shooterName) shooterName.textContent = currentShooter.name || '';
-            if (stageName) stageName.textContent = currentStage.name || 'غير متوفر';
-            if (stageDateInScore) stageDateInScore.textContent = currentStage.date || 'غير متوفر';
-            if (stageRounds) stageRounds.textContent = currentStage.rounds || 0;
-        
-            // حساب النقاط القصوى بناءً على نظام التسجيل
-            if (maxPoints && currentStage.rounds) {
-                const scoring = getScoring(currentStage.rounds, currentStage.points);
-                const maxScore = currentStage.rounds * scoring.A;
-                maxPoints.textContent = `(من ${maxScore})`;
-            } else if (maxPoints) {
-                maxPoints.textContent = '';
+            const resultDiv = document.getElementById('result');
+
+            // التحقق من وجود العناصر
+            if (!shooterName || !stageName || !stageDateInScore || !stageRounds || !maxPoints || !shotsA || !shotsC || !shotsD || !shotsM || !resultDiv) {
+                console.error('عناصر DOM مفقودة في صفحة إدخال النتائج');
+                return;
             }
-        
-            // تحميل النقاط المسجلة إن وجدت
+
+            // تعيين معلومات الرامي والمرحلة
+            shooterName.textContent = currentShooter.name || 'غير متوفر';
+            stageName.textContent = currentStage.name || 'غير متوفر';
+            stageDateInScore.textContent = currentStage.date || 'غير متوفر';
+            stageRounds.textContent = currentStage.rounds || 0;
+
+            // حساب النقاط القصوى
+            const scoring = getScoring(currentStage.rounds, currentStage.points);
+            const maxScore = currentStage.rounds * scoring.A;
+            maxPoints.textContent = `(من ${maxScore})`;
+
+            // استرجاع النتائج المحفوظة
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
-            const existingScore = shooterScores.find(score => score.shooterId === currentShooter.id && score.stageId === currentStage.name);
-            
+            console.log('النتائج المحفوظة:', shooterScores);
+            console.log('معرف الرامي:', currentShooter.id, 'اسم المرحلة:', currentStage.name);
+
+            const existingScore = shooterScores.find(
+                score => score.shooterId === currentShooter.id && score.stageId === currentStage.name
+            );
+
+            console.log('النتيجة الموجودة:', existingScore);
+
             if (existingScore) {
-                if (shotsA) shotsA.value = existingScore.scores.A !== undefined ? existingScore.scores.A : 0;
-                if (shotsC) shotsC.value = existingScore.scores.C !== undefined ? existingScore.scores.C : 0;
-                if (shotsD) shotsD.value = existingScore.scores.D !== undefined ? existingScore.scores.D : 0;
-                if (shotsM) shotsM.value = existingScore.scores.M !== undefined ? existingScore.scores.M : 0;
-                document.getElementById('result').textContent = `النقاط: ${existingScore.totalScore} - التقدير: ${existingScore.grade}`;
+                // تعيين القيم المحفوظة في حقول الإدخال
+                shotsA.value = existingScore.scores.A || 0;
+                shotsC.value = existingScore.scores.C || 0;
+                shotsD.value = existingScore.scores.D || 0;
+                shotsM.value = existingScore.scores.M || 0;
+                resultDiv.textContent = `النقاط: ${existingScore.totalScore} - التقدير: ${existingScore.grade}`;
+                resultDiv.classList.remove('error');
             } else {
-                if (shotsA) shotsA.value = 0;
-                if (shotsC) shotsC.value = 0;
-                if (shotsD) shotsD.value = 0;
-                if (shotsM) shotsM.value = 0;
-                document.getElementById('result').textContent = '';
+                // إذا لم تكن هناك نتيجة محفوظة، تعيين القيم الافتراضية
+                shotsA.value = 0;
+                shotsC.value = 0;
+                shotsD.value = 0;
+                shotsM.value = 0;
+                resultDiv.textContent = '';
             }
         }
-        // دالة للتحقق من صحة الإدخال
-        function validateInput(input) {
-            if (input.value < 0) input.value = 0;
-        }
+
+       
         
         function saveShooter() {
             const shooterNameInput = document.getElementById('shooterName');
@@ -1250,24 +1258,39 @@
 
         // دالة لحفظ نتيجة الرامي
         function saveShooterScore() {
+            console.log('حفظ نتيجة الرامي...');
             if (!currentShooter || !currentStage) {
+                console.error('لم يتم تحديد الرامي أو المرحلة');
                 alert("يرجى التأكد من اختيار رامي ومرحلة!");
                 return;
             }
-            const A = parseInt(document.getElementById('shotsA').value) || 0;
-            const C = parseInt(document.getElementById('shotsC').value) || 0;
-            const D = parseInt(document.getElementById('shotsD').value) || 0;
-            const M = parseInt(document.getElementById('shotsM').value) || 0;
-            const totalShots = A + C + D + M;
-            if (totalShots !== currentStage.rounds) {
-                document.getElementById('result').innerText = `عدد الطلقات يجب أن يكون ${currentStage.rounds}!`;
-                document.getElementById('result').classList.add('error');
+
+            const shotsA = document.getElementById('shotsA');
+            const shotsC = document.getElementById('shotsC');
+            const shotsD = document.getElementById('shotsD');
+            const shotsM = document.getElementById('shotsM');
+            const resultDiv = document.getElementById('result');
+
+            if (!shotsA || !shotsC || !shotsD || !shotsM || !resultDiv) {
+                console.error('حقول الإدخال مفقودة');
                 return;
             }
-            // الحصول على نظام التسجيل بناءً على عدد الطلقات ونقاط المرحلة
+
+            const A = parseInt(shotsA.value) || 0;
+            const C = parseInt(shotsC.value) || 0;
+            const D = parseInt(shotsD.value) || 0;
+            const M = parseInt(shotsM.value) || 0;
+            const totalShots = A + C + D + M;
+
+            if (totalShots !== currentStage.rounds) {
+                resultDiv.innerText = `عدد الطلقات يجب أن يكون ${currentStage.rounds}!`;
+                resultDiv.classList.add('error');
+                return;
+            }
+
             const scoring = getScoring(currentStage.rounds, currentStage.points);
             const totalScore = (A * scoring.A) + (C * scoring.C) + (D * scoring.D) + (M * scoring.M);
-            const maxScore = currentStage.rounds * scoring.A; // النقاط القصوى بناءً على A
+            const maxScore = currentStage.rounds * scoring.A;
             let grade;
             const percentage = (totalScore / maxScore) * 100;
             if (percentage >= 90) grade = "ممتاز";
@@ -1275,6 +1298,7 @@
             else if (percentage >= 70) grade = "جيد";
             else if (percentage >= 60) grade = "متوسط";
             else grade = "راسب";
+
             const shooterScore = {
                 shooterId: currentShooter.id,
                 stageId: currentStage.name,
@@ -1282,8 +1306,12 @@
                 grade,
                 scores: { A, C, D, M }
             };
+
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
-            const existingScoreIndex = shooterScores.findIndex(score => score.shooterId === currentShooter.id && score.stageId === currentStage.name);
+            const existingScoreIndex = shooterScores.findIndex(
+                score => score.shooterId === currentShooter.id && score.stageId === currentStage.name
+            );
+
             if (existingScoreIndex !== -1) {
                 shooterScores[existingScoreIndex] = shooterScore;
                 alert('تم تحديث النتيجة بنجاح!');
@@ -1291,13 +1319,20 @@
                 shooterScores.push(shooterScore);
                 alert(translations[currentLang].scoreSaved);
             }
+
             localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
+            console.log('النتائج بعد الحفظ:', JSON.parse(localStorage.getItem('shooterScores')));
             updateStorageInfo();
-            document.getElementById('result').innerText = `النقاط: ${totalScore} - التقدير: ${grade}`;
-            document.getElementById('result').classList.remove('error');
+
+            resultDiv.innerText = `النقاط: ${totalScore} - التقدير: ${grade}`;
+            resultDiv.classList.remove('error');
+
+            // إعادة تحميل التفاصيل للتأكد من عرض القيم المحفوظة
+            loadScoreDetails();
             showPage('stage-detail-page');
             loadShootersForStage();
         }
+
         // دالة لعرض صفحة إضافة مرحلة
         function showAddStagePage() {
             editingStageIndex = null;
@@ -2072,75 +2107,47 @@
             reader.readAsArrayBuffer(file);
         }
         function deleteShooterScore() {
+            console.log('حذف نتيجة الرامي...');
             if (!currentShooter || !currentStage) {
                 alert('لا يوجد رامي أو مرحلة محددة لحذف النتيجة.');
                 return;
             }
-        
+
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
-            
-            // البحث عن النتيجة المرتبطة بالرامي والمرحلة الحالية
             const scoreIndex = shooterScores.findIndex(
                 score => score.shooterId === currentShooter.id && score.stageId === currentStage.name
             );
-        
+
             if (scoreIndex === -1) {
                 alert('لا توجد نتيجة مسجلة لهذا الرامي في هذه المرحلة.');
                 return;
             }
-        
-            // تأكيد الحذف
+
             if (!confirm(`هل أنت متأكد من حذف نتيجة الرامي ${currentShooter.name} في المرحلة ${currentStage.name}؟`)) {
                 return;
             }
-        
-            // حذف النتيجة
+
             shooterScores.splice(scoreIndex, 1);
             localStorage.setItem('shooterScores', JSON.stringify(shooterScores));
-        
-            // إعادة تعيين حقول الإدخال إلى القيم الافتراضية
-            document.getElementById('shotsA').value = '0';
-            document.getElementById('shotsC').value = '0';
-            document.getElementById('shotsD').value = '0';
-            document.getElementById('shotsM').value = '0';
-            document.getElementById('result').textContent = '';
-        
+            updateStorageInfo();
+
+            // إعادة تحميل التفاصيل لعرض القيم الافتراضية
+            loadScoreDetails();
             alert('تم حذف النتيجة بنجاح! يمكنك الآن تسجيل نتيجة جديدة.');
         }
+
         
         // تحديث دالة selectShooter لعرض النتيجة المسجلة إن وجدت
         function selectShooter(shooterId) {
+            console.log('اختيار الرامي:', shooterId);
             const shooters = JSON.parse(localStorage.getItem('shooters') || '[]');
             currentShooter = shooters.find(shooter => shooter.id === shooterId);
-            if (!currentShooter) return;
-        
-            showPage('add-score-page');
-            document.getElementById('shooter-name').textContent = currentShooter.name || '';
-            document.getElementById('stage-name').textContent = currentStage.name || '';
-            document.getElementById('stage-date-in-score').textContent = currentStage.date || '';
-            document.getElementById('stage-rounds').textContent = currentStage.rounds || '';
-        
-            // البحث عن النتيجة المسجلة إن وجدت
-            const shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
-            const existingScore = shooterScores.find(
-                score => score.shooterId === currentShooter.id && score.stageId === currentStage.name
-            );
-        
-            // إذا كانت هناك نتيجة مسجلة، عرضها في الحقول
-            if (existingScore) {
-                document.getElementById('shotsA').value = existingScore.shotsA || '0';
-                document.getElementById('shotsC').value = existingScore.shotsC || '0';
-                document.getElementById('shotsD').value = existingScore.shotsD || '0';
-                document.getElementById('shotsM').value = existingScore.shotsM || '0';
-                document.getElementById('result').textContent = `النتيجة: ${existingScore.totalScore} - التقدير: ${existingScore.grade}`;
-            } else {
-                // إعادة تعيين الحقول إلى القيم الافتراضية إذا لم تكن هناك نتيجة
-                document.getElementById('shotsA').value = '0';
-                document.getElementById('shotsC').value = '0';
-                document.getElementById('shotsD').value = '0';
-                document.getElementById('shotsM').value = '0';
-                document.getElementById('result').textContent = '';
+            if (!currentShooter) {
+                console.error('لم يتم العثور على الرامي مع المعرف:', shooterId);
+                alert("خطأ في اختيار الرامي! يرجى التأكد من قائمة الرماة.");
+                return;
             }
+            showPage('add-score-page');
         }
         // تعديل التاريخ من الاخطاء      
         function fixInvalidDates() {
