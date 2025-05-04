@@ -422,6 +422,7 @@
     </div>
 
     <!-- Add Score Page -->
+   <!-- Add Score Page -->
     <div id="add-score-page" class="page">
         <div class="container">
             <div class="top-controls">
@@ -432,14 +433,12 @@
                 <div onclick="deleteShooterScore()" style="font-size: 24px; margin-block-start: 2%;">
                     <i class="fa-solid fa-trash" style="color: #dc3545;"></i>
                 </div>
-                
-               
             </div>
             <div style="margin-bottom: 15px;">
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> الرامي   :  <span id="shooter-name"></span></div>
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;">  الرماية :  <span id="stage-name"></span></div>
                 <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> التاريخ  :  <span id="stage-date-in-score"></span></div> 
-                <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> الطلقات  :  <span id="stage-rounds"></span></div>
+                <div style="font-weight: bold; text-align: right; padding: 5px; color: #1e3799;"> الطلقات  :  <span id="stage-rounds"></span>   النتيجة  :   <span id="max-points"> </span></div>
             </div>
             <div class="input-container">
                 <label for="shotsA">A:</label>
@@ -451,9 +450,8 @@
                 <label for="shotsM">M:</label>
                 <input type="number" style="background-color: #b71540; color: white; text-align: center;" id="shotsM" value="0" min="0" inputmode="numeric" pattern="[0-9]*" oninput="validateInput(this); handleZero(this)" onfocus="clearZero(this)" onblur="restoreZero(this)">
             </div>
-           
             <div id="result"></div>
-            <div onclick="saveShooterScore()" style="font-size: 34px;  margin-top: 100px;">
+            <div onclick="saveShooterScore()" style="font-size: 34px; margin-top: 100px;">
                 <i class="fa-sharp fa-solid fa-floppy-disk" style="color: #3a12af;"></i>
             </div>
         </div>
@@ -1062,21 +1060,43 @@
             const stageName = document.getElementById('stage-name');
             const stageDateInScore = document.getElementById('stage-date-in-score');
             const stageRounds = document.getElementById('stage-rounds');
-            const scoringSystem = document.getElementById('scoring-system');
-            if (shooterName) shooterName.textContent = `${currentShooter.name || ''}`;
+            const maxPoints = document.getElementById('max-points');
+            const shotsA = document.getElementById('shotsA');
+            const shotsC = document.getElementById('shotsC');
+            const shotsD = document.getElementById('shotsD');
+            const shotsM = document.getElementById('shotsM');
+        
+            if (shooterName) shooterName.textContent = currentShooter.name || '';
             if (stageName) stageName.textContent = currentStage.name || 'غير متوفر';
-            if (stageDateInScore) stageDateInScore.textContent = currentStage.date || "غير متوفر";
+            if (stageDateInScore) stageDateInScore.textContent = currentStage.date || 'غير متوفر';
             if (stageRounds) stageRounds.textContent = currentStage.rounds || 0;
-            if (scoringSystem) {
+        
+            // حساب النقاط القصوى بناءً على نظام التسجيل
+            if (maxPoints && currentStage.rounds) {
                 const scoring = getScoring(currentStage.rounds, currentStage.points);
-                scoringSystem.textContent = `A=${scoring.A}, C=${scoring.C}, D=${scoring.D}, M=${scoring.M}`;
+                const maxScore = currentStage.rounds * scoring.A;
+                maxPoints.textContent = `(من ${maxScore})`;
+            } else if (maxPoints) {
+                maxPoints.textContent = '';
             }
+        
+            // تحميل النقاط المسجلة إن وجدت
             let shooterScores = JSON.parse(localStorage.getItem('shooterScores') || '[]');
             const existingScore = shooterScores.find(score => score.shooterId === currentShooter.id && score.stageId === currentStage.name);
-            document.getElementById('shotsA').value = existingScore?.scores.A || 0;
-            document.getElementById('shotsC').value = existingScore?.scores.C || 0;
-            document.getElementById('shotsD').value = existingScore?.scores.D || 0;
-            document.getElementById('shotsM').value = existingScore?.scores.M || 0;
+            
+            if (existingScore) {
+                if (shotsA) shotsA.value = existingScore.scores.A !== undefined ? existingScore.scores.A : 0;
+                if (shotsC) shotsC.value = existingScore.scores.C !== undefined ? existingScore.scores.C : 0;
+                if (shotsD) shotsD.value = existingScore.scores.D !== undefined ? existingScore.scores.D : 0;
+                if (shotsM) shotsM.value = existingScore.scores.M !== undefined ? existingScore.scores.M : 0;
+                document.getElementById('result').textContent = `النقاط: ${existingScore.totalScore} - التقدير: ${existingScore.grade}`;
+            } else {
+                if (shotsA) shotsA.value = 0;
+                if (shotsC) shotsC.value = 0;
+                if (shotsD) shotsD.value = 0;
+                if (shotsM) shotsM.value = 0;
+                document.getElementById('result').textContent = '';
+            }
         }
         // دالة للتحقق من صحة الإدخال
         function validateInput(input) {
